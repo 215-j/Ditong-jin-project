@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>🐱🐶 猫狗分类器 · Web 版</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+            background: #f5f7fb;
+            margin: 0;
+            padding: 24px;
+            color: #222;
+        }
+        
+        .card {
+            max-width: 640px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, .06);
+        }
+        
+        h1 {
+            font-size: 22px;
+            margin: 0 0 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .desc {
+            color: #888;
+            font-size: 13px;
+            margin: 0 0 20px;
+        }
+        
+        .banner {
+            width: 100%;
+            max-height: 160px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            object-fit: cover;
+            display: block;
+            background: #eef4ff;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background: #fff;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            text-align: center;
+        }
+        
+        .tab.active {
+            background: #4f8cff;
+            color: #fff;
+            border-color: #4f8cff;
+        }
+        
+        .panel {
+            display: none;
+        }
+        
+        .panel.active {
+            display: block;
+        }
+        
+        .video-wrap {
+            position: relative;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            aspect-ratio: 4/3;
+        }
+        
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        
+        .placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            font-size: 13px;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            background: #4f8cff;
+            color: #fff;
+            font-family: inherit;
+        }
+        
+        button:disabled {
+            background: #bbb;
+            cursor: not-allowed;
+        }
+        
+        button.danger {
+            background: #ff6b6b;
+        }
+        
+        .upload-btn {
+            display: block;
+            padding: 12px;
+            border-radius: 8px;
+            background: #4f8cff;
+            color: #fff;
+            text-align: center;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        input[type=file] {
+            display: none;
+        }
+        
+        .preview {
+            margin-top: 12px;
+            width: 100%;
+            border-radius: 8px;
+            display: none;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .result {
+            margin-top: 16px;
+            display: none;
+        }
+        
+        .pred {
+            font-size: 24px;
+            font-weight: 600;
+            text-align: center;
+            padding: 8px 0;
+        }
+        
+        .bar-row {
+            margin-top: 12px;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .bar-bg {
+            background: #eee;
+            border-radius: 6px;
+            height: 10px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+        
+        .bar-fg {
+            height: 100%;
+            background: #4f8cff;
+            width: 0;
+            transition: width .4s;
+        }
+        
+        .bar-row.dog .bar-fg {
+            background: #ff8c4f;
+        }
+        
+        .tip {
+            color: #aaa;
+            font-size: 12px;
+            margin-top: 16px;
+            text-align: center;
+            line-height: 1.6;
+        }
+        
+        .status {
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: #eef4ff;
+            color: #4f8cff;
+            font-size: 13px;
+            margin-top: 12px;
+            display: none;
+        }
+        
+        .status.error {
+            background: #ffe5e5;
+            color: #cc3333;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <h1>🐱🐶 猫狗分类器</h1>
+        <p class="desc">基于 ResNet18 迁移学习训练,ONNX 在浏览器推理。无需服务器,纯前端。</p>
+        <img class="banner" src="banner.jpg" alt="cat dog banner" onerror="this.style.display='none'">
+
+        <div class="tabs">
+            <div class="tab active" id="tab-cam">📷 拍照</div>
+            <div class="tab" id="tab-upload">📁 上传</div>
+        </div>
+
+        <!-- 拍照面板 -->
+        <div class="panel active" id="panel-cam">
+            <div class="video-wrap">
+                <video id="video" autoplay playsinline muted></video>
+                <div class="placeholder" id="cam-placeholder">点击下方"启动摄像头"开始预览</div>
+            </div>
+            <div class="btn-row">
+                <button id="btn-start">▶️ 启动摄像头</button>
+                <button id="btn-capture" disabled>📸 拍照识别</button>
+                <button id="btn-stop" class="danger" disabled>⏹ 停止</button>
+            </div>
+        </div>
+
+        <!-- 上传面板 -->
+        <div class="panel" id="panel-upload">
+            <label class="upload-btn" for="file">📁 选择图片上传</label>
+            <input id="file" type="file" accept="image/*">
+        </div>
+
+        <!-- 共用结果区 -->
+        <img class="preview" id="preview">
+        <div class="result" id="result">
+            <div class="pred" id="pred"></div>
+            <div class="bar-row cat">
+                <span>🐱 猫</span><span id="p0">-</span>
+            </div>
+            <div class="bar-bg">
+                <div class="bar-fg" id="bar0"></div>
+            </div>
+            <div class="bar-row dog">
+                <span>🐶 狗</span><span id="p1">-</span>
+            </div>
+            <div class="bar-bg">
+                <div class="bar-fg" id="bar1"></div>
+            </div>
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <p class="tip">
+            模型大小 ~42MB,首次访问会下载并加载,请耐心等待。<br> GitHub Pages 部署 · 纯前端 onnxruntime-web 推理
+        </p>
+    </div>
+
+    <!-- onnxruntime-web (本地副本,避免 CDN 不可用) -->
+    <script src="ort.min.js"></script>
+    <script>
+        const CLASSES = ['🐱 猫', '🐶 狗'];
+        const IMAGENET_MEAN = [0.485, 0.456, 0.406];
+        const IMAGENET_STD = [0.229, 0.224, 0.225];
+        const MODEL_PATH = 'best_model.onnx';
+
+        const video = document.getElementById('video');
+        const placeholder = document.getElementById('cam-placeholder');
+        const btnStart = document.getElementById('btn-start');
+        const btnCapture = document.getElementById('btn-capture');
+        const btnStop = document.getElementById('btn-stop');
+        const tabCam = document.getElementById('tab-cam');
+        const tabUpload = document.getElementById('tab-upload');
+        const panelCam = document.getElementById('panel-cam');
+        const panelUpload = document.getElementById('panel-upload');
+        const fileInput = document.getElementById('file');
+        const preview = document.getElementById('preview');
+        const result = document.getElementById('result');
+        const statusEl = document.getElementById('status');
+
+        let stream = null;
+        let session = null;
+        let modelLoading = null;
+
+        function setStatus(msg, isError) {
+            statusEl.style.display = msg ? 'block' : 'none';
+            statusEl.textContent = msg || '';
+            statusEl.classList.toggle('error', !!isError);
+        }
+
+        // 模型懒加载
+        async function ensureModel() {
+            if (session) return session;
+            if (modelLoading) return modelLoading;
+            modelLoading = (async() => {
+                setStatus('正在加载模型 (~42MB),首次稍慢...');
+                try {
+                    // 让 ort 从同目录加载 wasm 后端
+                    ort.env.wasm.wasmPaths = './';
+                    session = await ort.InferenceSession.create(
+                        MODEL_PATH, {
+                            executionProviders: ['wasm']
+                        }
+                    );
+                    setStatus('模型加载完成,可以识别了');
+                    return session;
+                } catch (err) {
+                    modelLoading = null;
+                    setStatus('模型加载失败: ' + err.message, true);
+                    throw err;
+                }
+            })();
+            return modelLoading;
+        }
+
+        // 图片预处理:canvas resize 224x224 + RGB normalize
+        function preprocessImage(imgEl) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 224;
+            canvas.height = 224;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(imgEl, 0, 0, 224, 224);
+            const data = ctx.getImageData(0, 0, 224, 224).data; // RGBA
+            // 转 CHW float32 + normalize
+            const chw = new Float32Array(3 * 224 * 224);
+            for (let i = 0; i < 224 * 224; i++) {
+                const r = data[i * 4] / 255;
+                const g = data[i * 4 + 1] / 255;
+                const b = data[i * 4 + 2] / 255;
+                chw[i + 0 * 224 * 224] = (r - IMAGENET_MEAN[0]) / IMAGENET_STD[0];
+                chw[i + 1 * 224 * 224] = (g - IMAGENET_MEAN[1]) / IMAGENET_STD[1];
+                chw[i + 2 * 224 * 224] = (b - IMAGENET_MEAN[2]) / IMAGENET_STD[2];
+            }
+            return chw;
+        }
+
+        // softmax
+        function softmax(arr) {
+            const m = Math.max(...arr);
+            const exps = arr.map(v => Math.exp(v - m));
+            const s = exps.reduce((a, b) => a + b, 0);
+            return exps.map(v => v / s);
+        }
+
+        async function predict(imgEl) {
+            setStatus('识别中...');
+            try {
+                const sess = await ensureModel();
+                const chw = preprocessImage(imgEl);
+                const input = new ort.Tensor('float32', chw, [1, 3, 224, 224]);
+                const feeds = {};
+                feeds[sess.inputNames[0]] = input;
+                const out = await sess.run(feeds);
+                const logits = Array.from(out[sess.outputNames[0]].data);
+                const probs = softmax(logits);
+                const pred = probs.indexOf(Math.max(...probs));
+                document.getElementById('pred').textContent = CLASSES[pred];
+                document.getElementById('p0').textContent = (probs[0] * 100).toFixed(1) + '%';
+                document.getElementById('p1').textContent = (probs[1] * 100).toFixed(1) + '%';
+                document.getElementById('bar0').style.width = (probs[0] * 100) + '%';
+                document.getElementById('bar1').style.width = (probs[1] * 100) + '%';
+                result.style.display = 'block';
+                setStatus(`识别完成 · ${CLASSES[pred]} · ${(probs[pred]*100).toFixed(1)}%`);
+            } catch (err) {
+                setStatus('识别失败: ' + err.message, true);
+            }
+        }
+
+        // 图片转 Image 元素
+        function blobToImage(blob) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = URL.createObjectURL(blob);
+            });
+        }
+
+        // ----- tab 切换 -----
+        tabCam.onclick = () => {
+            tabCam.classList.add('active');
+            tabUpload.classList.remove('active');
+            panelCam.classList.add('active');
+            panelUpload.classList.remove('active');
+        };
+        tabUpload.onclick = () => {
+            tabUpload.classList.add('active');
+            tabCam.classList.remove('active');
+            panelUpload.classList.add('active');
+            panelCam.classList.remove('active');
+        };
+
+        // ----- 摄像头启停 -----
+        btnStart.onclick = async() => {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                placeholder.textContent = '当前浏览器不支持摄像头 API,请用上传模式。';
+                return;
+            }
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment'
+                    },
+                    audio: false
+                });
+                video.srcObject = stream;
+                placeholder.style.display = 'none';
+                btnStart.disabled = true;
+                btnCapture.disabled = false;
+                btnStop.disabled = false;
+            } catch (err) {
+                placeholder.textContent = '摄像头启动失败: ' + err.name + '\n' +
+                    (err.name == 'NotAllowedError' ?
+                        '浏览器拒绝了摄像头权限,请改用上传模式。' :
+                        (err.name == 'NotFoundError' ?
+                            '未找到摄像头设备,请改用上传模式。' : err.message));
+            }
+        };
+
+        btnStop.onclick = () => {
+            if (stream) {
+                stream.getTracks().forEach(t => t.stop());
+                stream = null;
+                video.srcObject = null;
+                btnStart.disabled = false;
+                btnCapture.disabled = true;
+                btnStop.disabled = true;
+                placeholder.style.display = 'flex';
+                placeholder.textContent = '摄像头已停止';
+            }
+        };
+
+        btnCapture.onclick = async() => {
+            if (!stream) return;
+            // 截取当前帧
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
+            // 显示预览
+            preview.src = URL.createObjectURL(blob);
+            preview.style.display = 'block';
+            // 推理
+            const img = await blobToImage(blob);
+            await predict(img);
+        };
+
+        fileInput.addEventListener('change', async e => {
+            const f = e.target.files[0];
+            if (!f) return;
+            preview.src = URL.createObjectURL(f);
+            preview.style.display = 'block';
+            const img = await blobToImage(f);
+            await predict(img);
+        });
+
+        // 离开页面时关摄像头
+        window.addEventListener('beforeunload', () => {
+            if (stream) stream.getTracks().forEach(t => t.stop());
+        });
+
+        // 启动时预加载模型(不阻塞 UI)
+        ensureModel().catch(() => {});
+    </script>
+</body>
+
+</html>

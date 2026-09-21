@@ -1,0 +1,37 @@
+# Python 构建产物
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.eggs/
+build/
+dist/
+*.spec
+
+# 虚拟环境
+venv/
+.venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# 操作系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 项目特定:PyTorch 原始模型不进仓库(ONNX 版本进仓库)
+*.pth
+
+# 数据集不上传
+猫狗数据集100张/
+*.zip
+
+# 应用打包产物(保留 deploy/ 即可)
+app/
